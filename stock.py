@@ -1,10 +1,17 @@
 import pandas as pd
 import requests as r
 from datetime import datetime, timedelta
+import sys
+
+default_value=30
+try:
+    inputday = int(sys.argv[1])
+except:
+    inputday=default_value
 
 end_date = datetime.now().date()
-start_date = end_date - timedelta(days=5)
-date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+start_date = end_date - timedelta(days=inputday)
+date_range = pd.date_range(start=start_date, end=end_date, freq='D')[::-1]
 
 # 创建一个空的Excel写入对象
 writer = pd.ExcelWriter('證券所.xlsx', engine='xlsxwriter')

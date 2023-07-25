@@ -2,15 +2,21 @@ import pandas as pd
 import requests as r
 import json
 from datetime import date, timedelta
+import sys
+import time
 
+default_value=30
 # Create an empty DataFrame to store all the data
-all_data = pd.DataFrame()
+
 
 # Specify the base URL
 base_url = 'https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?t=D&d='
 
 # Specify the number of days to collect data for
-num_days = 5
+try:
+    inputday = int(sys.argv[1])
+except:
+    inputday=default_value
 
 # Get the current date
 current_date = date.today()
@@ -18,7 +24,9 @@ current_date = date.today()
 excel_writer = pd.ExcelWriter('櫃買中心.xlsx')
 
 # Iterate over the past 30 days
-for i in range(num_days):
+for i in range(inputday):
+    
+
     # Calculate the date for the request
     request_date = current_date - timedelta(days=i)
     
@@ -32,7 +40,20 @@ for i in range(num_days):
     url = base_url + formatted_date
     
     # Send GET request and get the response
-    response = r.get(url)
+    retry_count = 0
+    response = None
+    
+    while retry_count < 3 and response is None:
+        try:
+            response = r.get(url, timeout=10)
+        except r.exceptions.RequestException:
+            print("No response. Retrying after {} seconds...".format(1))
+            time.sleep(1)
+            retry_count += 1
+    
+    if response is None:
+        print("No response after multiple retries. Skipping this request.")
+        continue
     print(url)
     # Parse JSON content
     data = response.json()
@@ -49,12 +70,10 @@ for i in range(num_days):
     df = df.rename(columns={0: '代碼', 1: '名字', 10: '外陸資', 13: '投信',22:'自營商', 23: '三大法人'})
     df = df[df['代碼'].str.len() == 4]
     
-    # Append the data to the all_data DataFrame
-    all_data = pd.concat([all_data, df], ignore_index=True)
-    
+
     # Save the data to a separate sheet in the Excel file
     sheet_name = request_date.strftime("%Y-%m-%d")
-    all_data.to_excel(excel_writer, sheet_name=sheet_name, index=False)
+    df.to_excel(excel_writer, sheet_name=sheet_name, index=False)
 
 # Save and close the Excel writer
 excel_writer._save()

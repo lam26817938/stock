@@ -23,13 +23,15 @@ for sheet in file2:
         merged_data[sheet] = pd.concat([merged_data[sheet], file2[sheet]], ignore_index=True)
     else:
         merged_data[sheet] = file2[sheet]
-
 for sheet in file3:
     if sheet in merged_data:
-        merged_data[sheet] = merged_data[sheet].merge(file3[sheet], on='代碼')
+        if '代碼' in file3[sheet].columns:
+            merged_data[sheet] = merged_data[sheet].merge(file3[sheet], on='代碼', how='left')
+        else:
+            merged_data[sheet] = pd.concat([merged_data[sheet], file3[sheet]], ignore_index=True)
     else:
         merged_data[sheet] = file3[sheet]
-
 with pd.ExcelWriter('天妮超可愛!.xlsx') as writer:
     for sheet, data in merged_data.items():
         data.to_excel(writer, sheet_name=sheet, index=False)
+        
